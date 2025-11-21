@@ -1,0 +1,5 @@
+{
+  "name": "VlogEspañol AI",
+  "description": "A Spanish language learning assistant that converts your daily life logs into Spanish vlog scripts, extracting vocabulary and grammar points with AI-powered TTS and quizzes.",
+  "requestFramePermissions": []
+}
