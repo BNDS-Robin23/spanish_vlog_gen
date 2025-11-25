@@ -1,14 +1,15 @@
 import React from 'react';
 import { VlogEntry } from '../types';
-import { Calendar, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronRight, Trash2 } from 'lucide-react';
 import { AudioButton } from './AudioButton';
 
 interface HistoryProps {
   vlogs: VlogEntry[];
   onSelect: (vlog: VlogEntry) => void;
+  onDelete: (id: string) => void;
 }
 
-export const History: React.FC<HistoryProps> = ({ vlogs, onSelect }) => {
+export const History: React.FC<HistoryProps> = ({ vlogs, onSelect, onDelete }) => {
   if (vlogs.length === 0) {
     return (
       <div className="text-center p-12">
@@ -20,42 +21,50 @@ export const History: React.FC<HistoryProps> = ({ vlogs, onSelect }) => {
   // Reverse chronological
   const sorted = [...vlogs].sort((a, b) => b.timestamp - a.timestamp);
 
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this vlog?")) {
+      onDelete(id);
+    }
+  };
+
   return (
-    <div className="max-w-3xl mx-auto p-4 space-y-4 pb-20">
-      <h2 className="text-2xl font-bold text-stone-800 mb-6">Your Journal</h2>
+    <div className="max-w-4xl mx-auto p-4 space-y-4 pb-32">
+      <h2 className="text-2xl font-bold text-stone-800 mb-6">Your Vlog History</h2>
       {sorted.map((vlog) => (
         <div 
           key={vlog.id}
-          className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 hover:border-orange-300 transition-all cursor-pointer group"
           onClick={() => onSelect(vlog)}
+          className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm hover:shadow-md transition-all cursor-pointer group relative"
         >
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex items-center text-xs text-stone-400 font-medium uppercase tracking-wide">
-              <Calendar size={14} className="mr-1" />
-              {new Date(vlog.timestamp).toLocaleDateString()} • {new Date(vlog.timestamp).toLocaleTimeString()}
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex items-center gap-2 text-stone-400 text-sm">
+              <Calendar size={14} />
+              <span>{new Date(vlog.timestamp).toLocaleDateString()}</span>
+              <span>•</span>
+              <span>{new Date(vlog.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
             </div>
-            <AudioButton text={vlog.spanishText} size="sm" />
+            <div className="flex items-center gap-2">
+              <AudioButton text={vlog.spanishText} size="sm" />
+              <button 
+                onClick={(e) => handleDelete(e, vlog.id)}
+                className="p-1 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                title="Delete Vlog"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           </div>
           
-          <p className="text-stone-800 font-medium line-clamp-2 mb-2 group-hover:text-orange-700 transition-colors">
+          <p className="text-stone-800 font-medium line-clamp-2 mb-2 pr-8">
             {vlog.spanishText}
           </p>
-          <p className="text-stone-400 text-sm line-clamp-1">
-            {vlog.originalText}
-          </p>
           
-          <div className="mt-4 flex items-center gap-4">
-            <div className="flex gap-2">
-              <span className="px-2 py-1 bg-orange-50 text-orange-700 text-xs rounded-md">
-                {vlog.vocabulary.length} Words
-              </span>
-              <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md">
-                {vlog.grammar.length} Grammar Points
-              </span>
-            </div>
-            <div className="ml-auto text-stone-300 group-hover:text-orange-500 transition-colors">
-                <ChevronRight size={20} />
-            </div>
+          <div className="flex justify-between items-center text-xs text-stone-500">
+             <span className="bg-stone-100 px-2 py-1 rounded">
+                {vlog.vocabulary.length} words • {vlog.grammar.length} grammar points
+             </span>
+             <ChevronRight size={16} className="text-stone-300 group-hover:text-orange-500 transition-colors" />
           </div>
         </div>
       ))}

@@ -23,6 +23,26 @@ export const generateVlogContent = async (chineseText: string): Promise<Omit<Vlo
     Chinese Input: "${chineseText}"
   `;
 
+  return await fetchFromGemini(prompt, chineseText);
+};
+
+export const modifyVlogContent = async (currentSpanishText: string, instruction: string, originalChinese: string): Promise<Omit<VlogEntry, 'timestamp'>> => {
+  const prompt = `
+    You are a professional Spanish language tutor.
+    Here is a Spanish vlog script: "${currentSpanishText}"
+    
+    Please REWRITE this script based on the following instruction: "${instruction}"
+    
+    Keep the meaning close to the original concept unless the instruction says otherwise.
+    After rewriting, re-extract key vocabulary and grammar points from the NEW text.
+  `;
+
+  return await fetchFromGemini(prompt, originalChinese);
+};
+
+// Helper to handle the JSON schema request for full vlog entries
+async function fetchFromGemini(prompt: string, originalTextRef: string): Promise<Omit<VlogEntry, 'timestamp'>> {
+  const ai = getAIClient();
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash',
     contents: prompt,
@@ -31,7 +51,7 @@ export const generateVlogContent = async (chineseText: string): Promise<Omit<Vlo
       responseSchema: {
         type: Type.OBJECT,
         properties: {
-          spanishText: { type: Type.STRING, description: "The translated Spanish vlog script." },
+          spanishText: { type: Type.STRING, description: "The translated/rewritten Spanish vlog script." },
           vocabulary: {
             type: Type.ARRAY,
             items: {
@@ -66,12 +86,71 @@ export const generateVlogContent = async (chineseText: string): Promise<Omit<Vlo
 
   return {
     id: uuidv4(),
-    originalText: chineseText,
+    originalText: originalTextRef, // Preserve original thought
     spanishText: result.spanishText,
     vocabulary: result.vocabulary,
     grammar: result.grammar
   };
+}
+
+// --- Selection Analysis ---
+
+export const analyzeSelection = async (
+  selection: string, 
+  fullContext: string, 
+  type: 'vocab' | 'grammar'
+): Promise<Vocabulary | Grammar> => {
+  const ai = getAIClient();
+
+  const prompt = type === 'vocab' 
+    ? `
+      Context: "${fullContext}"
+      Target Word/Phrase: "${selection}"
+      
+      Explain this target word/phrase as a vocabulary item for a Chinese learner of Spanish.
+      Return JSON.
+    `
+    : `
+      Context: "${fullContext}"
+      Target Phrase/Sentence: "${selection}"
+      
+      Explain the grammar point visible in this target phrase for a Chinese learner of Spanish.
+      Return JSON.
+    `;
+
+  const schema = type === 'vocab' 
+    ? {
+        type: Type.OBJECT,
+        properties: {
+          word: { type: Type.STRING, description: "The selected word(s)" },
+          meaning: { type: Type.STRING, description: "Meaning in Chinese" },
+          context: { type: Type.STRING, description: "The sentence containing it (or the selection itself)" }
+        }
+      }
+    : {
+        type: Type.OBJECT,
+        properties: {
+          point: { type: Type.STRING, description: "Name of the grammar point" },
+          explanation: { type: Type.STRING, description: "Explanation in Chinese" },
+          example: { type: Type.STRING, description: "The selection usage" }
+        }
+      };
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: schema
+    }
+  });
+
+  const jsonText = response.text;
+  if (!jsonText) throw new Error("No response from AI");
+  
+  return JSON.parse(jsonText);
 };
+
 
 // --- TTS Generation ---
 
@@ -108,9 +187,6 @@ async function decodeAudioData(
 export const playSpanishAudio = async (text: string) => {
   const ai = getAIClient();
   
-  // Truncate text if it's too long for a single pass, though Gemini can handle decent length.
-  // For a vlog, it might be long, but let's assume reasonably short paragraphs for now.
-  
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
@@ -119,7 +195,7 @@ export const playSpanishAudio = async (text: string) => {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' }, // Spanish-sounding or generic capable voice
+            prebuiltVoiceConfig: { voiceName: 'Kore' },
           },
         },
       },
@@ -147,7 +223,7 @@ export const playSpanishAudio = async (text: string) => {
     source.connect(outputNode);
     source.start();
     
-    return source; // Return source to allow stopping if needed
+    return source; 
   } catch (error) {
     console.error("TTS Error:", error);
     throw error;

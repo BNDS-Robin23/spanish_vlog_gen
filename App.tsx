@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ViewState, VlogEntry } from './types';
-import { getAllVlogs } from './services/db';
+import { getAllVlogs, deleteVlog } from './services/db';
 import { CreateVlog } from './components/CreateVlog';
 import { History } from './components/History';
 import { Quiz } from './components/Quiz';
@@ -30,6 +30,14 @@ const App: React.FC = () => {
 
   const handleVlogSelect = (vlog: VlogEntry) => {
     setSelectedVlog(vlog);
+  };
+
+  const handleDeleteVlog = async (id: string) => {
+    await deleteVlog(id);
+    if (selectedVlog && selectedVlog.id === id) {
+      setSelectedVlog(null);
+    }
+    await loadVlogs();
   };
 
   // Navigation Item Component
@@ -92,7 +100,13 @@ const App: React.FC = () => {
         /* Main Views */
         <>
           {view === ViewState.CREATE && <CreateVlog onSaved={handleVlogSaved} />}
-          {view === ViewState.HISTORY && <History vlogs={vlogs} onSelect={handleVlogSelect} />}
+          {view === ViewState.HISTORY && (
+            <History 
+              vlogs={vlogs} 
+              onSelect={handleVlogSelect} 
+              onDelete={handleDeleteVlog} 
+            />
+          )}
           {view === ViewState.REVIEW && <Quiz vlogs={vlogs} />}
         </>
       )}
