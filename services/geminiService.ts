@@ -3,9 +3,11 @@ import { VlogEntry, Vocabulary, Grammar } from "../types";
 import { v4 as uuidv4 } from 'uuid';
 
 const getAIClient = () => {
-  const apiKey = process.env.API_KEY;
+  // Try Vite standard env var first (Netlify), then fallback to process.env (Node/local)
+  const apiKey = import.meta.env.VITE_API_KEY || process.env.API_KEY;
   if (!apiKey) {
-    throw new Error("API_KEY is missing in environment variables");
+    console.error("API Key is missing. Make sure VITE_API_KEY is set in Netlify or .env");
+    throw new Error("API_KEY is missing");
   }
   return new GoogleGenAI({ apiKey });
 };

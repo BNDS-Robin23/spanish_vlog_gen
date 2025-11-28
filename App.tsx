@@ -13,14 +13,18 @@ const App: React.FC = () => {
   const [vlogs, setVlogs] = useState<VlogEntry[]>([]);
   const [selectedVlog, setSelectedVlog] = useState<VlogEntry | null>(null);
 
-  // Load vlogs on mount and when view changes to History/Dashboard
+  // Load vlogs on mount AND when view changes (e.g., clicking History tab)
   useEffect(() => {
     loadVlogs();
-  }, []);
+  }, [view]);
 
   const loadVlogs = async () => {
-    const data = await getAllVlogs();
-    setVlogs(data);
+    try {
+      const data = await getAllVlogs();
+      setVlogs(data);
+    } catch (e) {
+      console.error("Failed to load vlogs", e);
+    }
   };
 
   const handleVlogSaved = async () => {

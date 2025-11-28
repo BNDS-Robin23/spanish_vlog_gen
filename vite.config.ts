@@ -18,8 +18,5 @@ export default defineConfig({
     port: port,
     allowedHosts: true,
   },
-  define: {
-    // Polyfill process.env to ensure `process.env.API_KEY` works in the browser
-    'process.env': process.env
-  }
+  // Removed define: { 'process.env': ... } to avoid conflicts with Netlify/Vite build process
 });
