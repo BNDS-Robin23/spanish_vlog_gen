@@ -3,8 +3,11 @@ import { VlogEntry, Vocabulary, Grammar } from "../types";
 import { v4 as uuidv4 } from 'uuid';
 
 const getAIClient = () => {
-  // Try Vite standard env var first (Netlify), then fallback to process.env (Node/local)
-  const apiKey = import.meta.env.VITE_API_KEY || process.env.API_KEY;
+  // Safely check for env vars avoiding ReferenceError for 'process' in browser
+  // Netlify/Vite uses import.meta.env.VITE_API_KEY.
+  // We check typeof process to avoid crashing if process is undefined (browser).
+  const apiKey = import.meta.env.VITE_API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : undefined);
+  
   if (!apiKey) {
     console.error("API Key is missing. Make sure VITE_API_KEY is set in Netlify or .env");
     throw new Error("API_KEY is missing");
